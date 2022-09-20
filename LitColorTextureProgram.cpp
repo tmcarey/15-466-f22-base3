@@ -23,6 +23,7 @@ Load< LitColorTextureProgram > lit_color_texture_program(LoadTagEarly, []() -> L
 	lit_color_texture_program_pipeline.LIGHT_CUTOFF_float = ret->LIGHT_CUTOFF_float;
 	*/
 
+
 	//make a 1-pixel white texture to bind by default:
 	GLuint tex;
 	glGenTextures(1, &tex);
@@ -75,6 +76,8 @@ LitColorTextureProgram::LitColorTextureProgram() {
 		"uniform vec3 LIGHT_DIRECTION;\n"
 		"uniform vec3 LIGHT_ENERGY;\n"
 		"uniform float LIGHT_CUTOFF;\n"
+		"uniform vec3 CAMERA_LOCATION;\n"
+		"uniform vec4 FOG_COLOR;\n"
 		"in vec3 position;\n"
 		"in vec3 normal;\n"
 		"in vec4 color;\n"
@@ -103,7 +106,9 @@ LitColorTextureProgram::LitColorTextureProgram() {
 		"		e = max(0.0, dot(n,-LIGHT_DIRECTION)) * LIGHT_ENERGY;\n"
 		"	}\n"
 		"	vec4 albedo = texture(TEX, texCoord) * color;\n"
-		"	fragColor = vec4(e*albedo.rgb, albedo.a);\n"
+		"   vec4 nonFogColor = vec4(e*albedo.rgb, albedo.a);\n"
+		"   float distance = length(position - CAMERA_LOCATION)\n"
+		"	fragColor = mix(nonFogColor, FOG_COLOR, distance / 20.0f)\n"
 		"}\n"
 	);
 	//As you can see above, adjacent strings in C/C++ are concatenated.
@@ -126,6 +131,8 @@ LitColorTextureProgram::LitColorTextureProgram() {
 	LIGHT_ENERGY_vec3 = glGetUniformLocation(program, "LIGHT_ENERGY");
 	LIGHT_CUTOFF_float = glGetUniformLocation(program, "LIGHT_CUTOFF");
 
+	CAMERA_POSITION_vec3 = glGetUniformLocation(program, "CAMERA_POSITION");
+	FOG_COLOR_vec4 = glGetUniformLocation(program, "FOG_COLOR");
 
 	GLuint TEX_sampler2D = glGetUniformLocation(program, "TEX");
 
