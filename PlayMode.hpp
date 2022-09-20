@@ -30,6 +30,7 @@ struct PlayMode : Mode {
 
 	//hexapod leg to wobble:
 	Scene::Transform *sub = nullptr;
+	Scene::Transform *sub2 = nullptr;
 	glm::quat subRotation;
 	Scene::Transform *subparent = nullptr;
 	Scene::Transform *floor = nullptr;

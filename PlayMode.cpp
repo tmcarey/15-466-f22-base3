@@ -50,11 +50,16 @@ Load< Sound::Sample > dusty_floor_sample(LoadTagDefault, []() -> Sound::Sample c
 	return new Sound::Sample(data_path("dusty-floor.opus"));
 });
 
+Load< Sound::Sample > sonar_blip(LoadTagDefault, []() -> Sound::Sample const * {
+	return new Sound::Sample(data_path("sonarblip.opus"));
+});
+
 PlayMode::PlayMode() : scene(*hexapod_scene) {
 	//get pointers to leg for convenience:
 	for (auto &transform : scene.transforms) {
 		if (transform.name == "SubParent") subparent = &transform;
 		if (transform.name == "Sub") sub = &transform;
+		if (transform.name == "Sub2") sub2 = &transform;
 		if (transform.name == "Floor") floor = &transform;
 		if (transform.name == "SonarArm") sonararm = &transform;
 	}
@@ -71,7 +76,7 @@ PlayMode::PlayMode() : scene(*hexapod_scene) {
 
 	//start music loop playing:
 	// (note: position will be over-ridden in update())
-	leg_tip_loop = Sound::loop_3D(*dusty_floor_sample, 1.0f, glm::vec3(0), 10.0f);
+	//leg_tip_loop = Sound::loop_3D(*dusty_floor_sample, 1.0f, glm::vec3(0), 10.0f);
 }
 
 PlayMode::~PlayMode() {
@@ -199,9 +204,15 @@ void PlayMode::update(float elapsed) {
 			newSonarAngle -= 2 * glm::pi<float>();
 		}
 
+		glm::vec3 toSub = sub2->position - sub->position;
+		toSub.z = 0.0f;
+
+
+
 		if(currentSonarAngle > newSonarAngle){
 			// we crossed 0
 			printf("crossed 0 angle\n");
+			Sound::play(*sonar_blip, 1.0f, 0);
 		}
 
 		currentSonarAngle = newSonarAngle;
