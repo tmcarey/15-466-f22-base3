@@ -29,7 +29,7 @@ struct LitColorTextureProgram {
 	GLuint LIGHT_ENERGY_vec3 = -1U;
 	GLuint LIGHT_CUTOFF_float = -1U;
 
-	GLuint CAMERA_POSITION_vec3 = -1U;
+	GLuint OBJECT_TO_VIEW_mat4x3 = -1U;
 	GLuint FOG_COLOR_vec4 = -1U;
 	
 	//Textures:

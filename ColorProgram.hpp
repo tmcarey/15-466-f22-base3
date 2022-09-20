@@ -2,6 +2,7 @@
 
 #include "GL.hpp"
 #include "Load.hpp"
+#include "Scene.hpp"
 
 //Shader program that draws transformed, colored vertices:
 struct ColorProgram {

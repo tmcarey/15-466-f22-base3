@@ -13,6 +13,7 @@ Load< ShowSceneProgram > show_scene_program(LoadTagEarly, []() -> ShowSceneProgr
 	show_scene_program_pipeline.OBJECT_TO_CLIP_mat4 = ret->OBJECT_TO_CLIP_mat4;
 	show_scene_program_pipeline.OBJECT_TO_LIGHT_mat4x3 = ret->OBJECT_TO_LIGHT_mat4x3;
 	show_scene_program_pipeline.NORMAL_TO_LIGHT_mat3 = ret->NORMAL_TO_LIGHT_mat3;
+	show_scene_program_pipeline.OBJECT_TO_VIEW_mat4x3 = ret->OBJECT_TO_VIEW_mat4x3;
 
 	return ret;
 });
@@ -73,6 +74,7 @@ ShowSceneProgram::ShowSceneProgram() {
 		"}\n"
 	);
 
+	printf("here\n");
 	//look up the locations of vertex attributes:
 	Position_vec4 = glGetAttribLocation(program, "Position");
 	Normal_vec3 = glGetAttribLocation(program, "Normal");
@@ -83,6 +85,7 @@ ShowSceneProgram::ShowSceneProgram() {
 	OBJECT_TO_CLIP_mat4 = glGetUniformLocation(program, "OBJECT_TO_CLIP");
 	OBJECT_TO_LIGHT_mat4x3 = glGetUniformLocation(program, "OBJECT_TO_LIGHT");
 	NORMAL_TO_LIGHT_mat3 = glGetUniformLocation(program, "NORMAL_TO_LIGHT");
+	OBJECT_TO_VIEW_mat4x3 = glGetUniformLocation(program, "OBJECT_TO_VIEW");
 
 	INSPECT_MODE_int = glGetUniformLocation(program, "INSPECT_MODE");
 }

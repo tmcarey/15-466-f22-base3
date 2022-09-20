@@ -23,14 +23,18 @@ struct PlayMode : Mode {
 	struct Button {
 		uint8_t downs = 0;
 		uint8_t pressed = 0;
-	} left, right, down, up;
+	} left, right, back, forward, up, down;
 
 	//local copy of the game scene (so code can change it during gameplay):
 	Scene scene;
 
 	//hexapod leg to wobble:
 	Scene::Transform *sub = nullptr;
+	glm::quat subRotation;
+	Scene::Transform *subparent = nullptr;
 	Scene::Transform *floor = nullptr;
+	Scene::Transform *sonararm = nullptr;
+	float currentSonarAngle = 0.0f;
 
 	//music coming from the tip of the leg (as a demonstration):
 	std::shared_ptr< Sound::PlayingSample > leg_tip_loop;

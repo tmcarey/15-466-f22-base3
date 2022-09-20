@@ -23,6 +23,7 @@ struct ShowSceneProgram {
 	GLuint OBJECT_TO_CLIP_mat4 = -1U;
 	GLuint OBJECT_TO_LIGHT_mat4x3 = -1U;
 	GLuint NORMAL_TO_LIGHT_mat3 = -1U;
+	GLuint OBJECT_TO_VIEW_mat4x3 = -1U;
 
 	GLuint INSPECT_MODE_int = -1U; //0: basic lighting; 1: position only; 2: normal only; 3: color only; 4: texcoord only
 

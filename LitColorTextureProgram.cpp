@@ -14,6 +14,7 @@ Load< LitColorTextureProgram > lit_color_texture_program(LoadTagEarly, []() -> L
 	lit_color_texture_program_pipeline.OBJECT_TO_CLIP_mat4 = ret->OBJECT_TO_CLIP_mat4;
 	lit_color_texture_program_pipeline.OBJECT_TO_LIGHT_mat4x3 = ret->OBJECT_TO_LIGHT_mat4x3;
 	lit_color_texture_program_pipeline.NORMAL_TO_LIGHT_mat3 = ret->NORMAL_TO_LIGHT_mat3;
+	lit_color_texture_program_pipeline.OBJECT_TO_VIEW_mat4x3 = ret->OBJECT_TO_VIEW_mat4x3;
 
 	/* This will be used later if/when we build a light loop into the Scene:
 	lit_color_texture_program_pipeline.LIGHT_TYPE_int = ret->LIGHT_TYPE_int;
@@ -51,17 +52,20 @@ LitColorTextureProgram::LitColorTextureProgram() {
 		"#version 330\n"
 		"uniform mat4 OBJECT_TO_CLIP;\n"
 		"uniform mat4x3 OBJECT_TO_LIGHT;\n"
+		"uniform mat4x3 OBJECT_TO_VIEW;\n"
 		"uniform mat3 NORMAL_TO_LIGHT;\n"
 		"in vec4 Position;\n"
 		"in vec3 Normal;\n"
 		"in vec4 Color;\n"
 		"in vec2 TexCoord;\n"
 		"out vec3 position;\n"
+		"out vec3 viewPosition;\n"
 		"out vec3 normal;\n"
 		"out vec4 color;\n"
 		"out vec2 texCoord;\n"
 		"void main() {\n"
 		"	gl_Position = OBJECT_TO_CLIP * Position;\n"
+		"	viewPosition =  OBJECT_TO_VIEW * Position;\n"
 		"	position = OBJECT_TO_LIGHT * Position;\n"
 		"	normal = NORMAL_TO_LIGHT * Normal;\n"
 		"	color = Color;\n"
@@ -79,6 +83,7 @@ LitColorTextureProgram::LitColorTextureProgram() {
 		"uniform vec3 CAMERA_LOCATION;\n"
 		"uniform vec4 FOG_COLOR;\n"
 		"in vec3 position;\n"
+		"in vec3 viewPosition;\n"
 		"in vec3 normal;\n"
 		"in vec4 color;\n"
 		"in vec2 texCoord;\n"
@@ -106,9 +111,9 @@ LitColorTextureProgram::LitColorTextureProgram() {
 		"		e = max(0.0, dot(n,-LIGHT_DIRECTION)) * LIGHT_ENERGY;\n"
 		"	}\n"
 		"	vec4 albedo = texture(TEX, texCoord) * color;\n"
-		"   vec4 nonFogColor = vec4(e*albedo.rgb, albedo.a);\n"
-		"   float distance = length(position - CAMERA_LOCATION)\n"
-		"	fragColor = mix(nonFogColor, FOG_COLOR, distance / 20.0f)\n"
+		"   vec4 nonFogColor = vec4(0*albedo.rgb, albedo.a);\n"
+		"   float distance = length(viewPosition);\n"
+		"	fragColor = mix(nonFogColor, FOG_COLOR, min(1.0, (distance * distance) / 1000.0f));\n"
 		"}\n"
 	);
 	//As you can see above, adjacent strings in C/C++ are concatenated.
@@ -131,7 +136,7 @@ LitColorTextureProgram::LitColorTextureProgram() {
 	LIGHT_ENERGY_vec3 = glGetUniformLocation(program, "LIGHT_ENERGY");
 	LIGHT_CUTOFF_float = glGetUniformLocation(program, "LIGHT_CUTOFF");
 
-	CAMERA_POSITION_vec3 = glGetUniformLocation(program, "CAMERA_POSITION");
+	OBJECT_TO_VIEW_mat4x3 = glGetUniformLocation(program, "OBJECT_TO_VIEW");
 	FOG_COLOR_vec4 = glGetUniformLocation(program, "FOG_COLOR");
 
 	GLuint TEX_sampler2D = glGetUniformLocation(program, "TEX");
