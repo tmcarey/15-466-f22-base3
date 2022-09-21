@@ -10,6 +10,7 @@
 #include "gl_errors.hpp"
 #include "data_path.hpp"
 
+#include <cmath>
 #include <glm/gtc/type_ptr.hpp>
 
 #include <random>
@@ -204,15 +205,8 @@ void PlayMode::update(float elapsed) {
 			newSonarAngle -= 2 * glm::pi<float>();
 		}
 
-		glm::vec3 toSub = sub2->position - sub->position;
-		toSub.z = 0.0f;
-
-
-
-		if(currentSonarAngle > newSonarAngle){
-			// we crossed 0
-			printf("crossed 0 angle\n");
-			Sound::play(*sonar_blip, 1.0f, 0);
+		if(DidPassLocation(currentSonarAngle, newSonarAngle, sub2->position)){
+			Sound::play(*sonar_blip, 1.0f, 0.0f);
 		}
 
 		currentSonarAngle = newSonarAngle;
@@ -250,6 +244,24 @@ void PlayMode::update(float elapsed) {
 	right.downs = 0;
 	forward.downs = 0;
 	back.downs = 0;
+}
+
+bool PlayMode::DidPassLocation(float prevAngle, float newAngle, glm::vec3 location){
+	glm::vec3 toLocation = location - sub->position;
+	toLocation.z = 0.0f;
+	glm::vec3 localToLocation = toLocation * sub->make_world_to_local();
+	float angle = -(std::atan2(localToLocation.y, localToLocation.x) - glm::pi<float>());
+
+	bool currentSign = std::signbit(angle - currentSonarAngle);
+	bool newSign = std::signbit(angle - newAngle);
+
+	if(currentSonarAngle > newAngle && currentSign == newSign){
+		return true;
+	}else if(currentSonarAngle < newAngle && currentSign != newSign){
+		return true;
+	}
+
+	return false;
 }
 
 void PlayMode::draw(glm::uvec2 const &drawable_size) {

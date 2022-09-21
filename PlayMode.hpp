@@ -16,6 +16,7 @@ struct PlayMode : Mode {
 	virtual bool handle_event(SDL_Event const &, glm::uvec2 const &window_size) override;
 	virtual void update(float elapsed) override;
 	virtual void draw(glm::uvec2 const &drawable_size) override;
+	bool DidPassLocation(float prevAngle, float newAngle, glm::vec3 position);
 
 	//----- game state -----
 

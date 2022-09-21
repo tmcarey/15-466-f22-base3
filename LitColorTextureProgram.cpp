@@ -113,7 +113,7 @@ LitColorTextureProgram::LitColorTextureProgram() {
 		"	vec4 albedo = texture(TEX, texCoord) * color;\n"
 		"   vec4 nonFogColor = vec4(0*albedo.rgb, albedo.a);\n"
 		"   float distance = length(viewPosition);\n"
-		"	fragColor = mix(nonFogColor, FOG_COLOR, min(1.0, (distance * distance) / 1000.0f));\n"
+		"	fragColor = mix(nonFogColor, FOG_COLOR, min(1.0, (distance * distance) / 2000.0f));\n"
 		"}\n"
 	);
 	//As you can see above, adjacent strings in C/C++ are concatenated.
