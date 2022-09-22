@@ -111,7 +111,7 @@ LitColorTextureProgram::LitColorTextureProgram() {
 		"		e = max(0.0, dot(n,-LIGHT_DIRECTION)) * LIGHT_ENERGY;\n"
 		"	}\n"
 		"	vec4 albedo = texture(TEX, texCoord) * color;\n"
-		"   vec4 nonFogColor = vec4(0*albedo.rgb, albedo.a);\n"
+		"   vec4 nonFogColor = vec4(e*albedo.rgb, albedo.a);\n"
 		"   float distance = length(viewPosition);\n"
 		"	fragColor = mix(nonFogColor, FOG_COLOR, min(1.0, (distance * distance) / 2000.0f));\n"
 		"}\n"

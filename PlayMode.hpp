@@ -3,6 +3,7 @@
 #include "Scene.hpp"
 #include "Sound.hpp"
 #include "Particle.hpp"
+#include "Goal.hpp"
 
 #include <glm/glm.hpp>
 
@@ -33,6 +34,7 @@ struct PlayMode : Mode {
 
 	//hexapod leg to wobble:
 	Scene::Transform *sub = nullptr;
+	Scene::Transform *prop = nullptr;
 	Scene::Transform *sub2 = nullptr;
 	glm::quat subRotation;
 	Scene::Transform *allparent = nullptr;
@@ -41,7 +43,11 @@ struct PlayMode : Mode {
 	Scene::Transform *floor = nullptr;
 	Scene::Transform *sonararm = nullptr;
 	std::array<Particle*, 25> particles;
+	std::array<Goal*, 10> goals;
+	std::array<Goal*, 10> mines;
 	float currentSonarAngle = 0.0f;
+	int amountCollected;
+	int total;
 
 	//music coming from the tip of the leg (as a demonstration):
 	std::shared_ptr< Sound::PlayingSample > leg_tip_loop;

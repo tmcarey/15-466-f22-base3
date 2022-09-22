@@ -3,6 +3,7 @@
 #include "GL.hpp"
 #include "LitColorTextureProgram.hpp"
 #include "ColorTextureProgram.hpp"
+#include "glm/gtx/string_cast.hpp"
 
 #include "DrawLines.hpp"
 #include "Mesh.hpp"
@@ -47,12 +48,20 @@ Load< Scene > hexapod_scene(LoadTagDefault, []() -> Scene const * {
 	});
 });
 
-Load< Sound::Sample > dusty_floor_sample(LoadTagDefault, []() -> Sound::Sample const * {
-	return new Sound::Sample(data_path("dusty-floor.opus"));
+Load< Sound::Sample > success(LoadTagDefault, []() -> Sound::Sample const * {
+	return new Sound::Sample(data_path("success.opus"));
 });
 
-Load< Sound::Sample > sonar_blip(LoadTagDefault, []() -> Sound::Sample const * {
-	return new Sound::Sample(data_path("sonarblip.opus"));
+Load< Sound::Sample > ambient(LoadTagDefault, []() -> Sound::Sample const * {
+	return new Sound::Sample(data_path("ambient.opus"));
+});
+
+Load< Sound::Sample > sonar_1(LoadTagDefault, []() -> Sound::Sample const * {
+	return new Sound::Sample(data_path("sonar1.opus"));
+});
+
+Load< Sound::Sample > sonar_2(LoadTagDefault, []() -> Sound::Sample const * {
+	return new Sound::Sample(data_path("sonar2.opus"));
 });
 
 PlayMode::PlayMode() : scene(*hexapod_scene) {
@@ -60,6 +69,7 @@ PlayMode::PlayMode() : scene(*hexapod_scene) {
 	for (auto &transform : scene.transforms) {
 		if (transform.name == "AllParent") allparent = &transform;
 		if (transform.name == "SubParent") subparent = &transform;
+		if (transform.name == "Prop") prop = &transform;
 		if (transform.name == "CamParent") camparent = &transform;
 		if (transform.name == "Sub") sub = &transform;
 		if (transform.name == "Sub2") sub2 = &transform;
@@ -92,6 +102,61 @@ PlayMode::PlayMode() : scene(*hexapod_scene) {
 		particles[i] = particle;
 	}
 
+	for(int i = 0; i < goals.size(); i++){
+		float x = static_cast <float> (rand()) / static_cast <float> (RAND_MAX);
+		float y = static_cast <float> (rand()) / static_cast <float> (RAND_MAX);
+
+		glm::vec3 offset = glm::vec3(x - 0.5f,y - 0.5f,1.0f) * 200.0f;
+		offset.z = 15.0f;
+		Scene::Transform *transform = new Scene::Transform();
+
+		Goal *goal = new Goal();
+		goal->transform = transform;
+		goal->transform->position = offset;
+
+		Mesh const &mesh = hexapod_meshes->lookup("Target");
+
+		scene.drawables.emplace_back(transform);
+		Scene::Drawable &drawable = scene.drawables.back();
+
+		drawable.pipeline = lit_color_texture_program_pipeline;
+		drawable.pipeline.vao = meshes_for_lit_color_texture_program;
+
+		drawable.pipeline.type = mesh.type;
+		drawable.pipeline.start = mesh.start;
+		drawable.pipeline.count = mesh.count;
+		goals[i] = goal;
+	}
+
+	for(int i = 0; i < mines.size(); i++){
+		float x = static_cast <float> (rand()) / static_cast <float> (RAND_MAX);
+		float y = static_cast <float> (rand()) / static_cast <float> (RAND_MAX);
+
+		glm::vec3 offset = glm::vec3(x - 0.5f,y - 0.5f,1.0f) * 200.0f;
+		offset.z = 15.0f;
+		Scene::Transform *transform = new Scene::Transform();
+
+		Goal *goal = new Goal();
+		goal->transform = transform;
+		goal->transform->position = offset;
+
+		Mesh const &mesh = hexapod_meshes->lookup("Mine");
+
+		scene.drawables.emplace_back(transform);
+		Scene::Drawable &drawable = scene.drawables.back();
+
+		drawable.pipeline = lit_color_texture_program_pipeline;
+		drawable.pipeline.vao = meshes_for_lit_color_texture_program;
+
+		drawable.pipeline.type = mesh.type;
+		drawable.pipeline.start = mesh.start;
+		drawable.pipeline.count = mesh.count;
+		mines[i] = goal;
+	}
+
+	amountCollected = 0;
+	total = (int)goals.size();
+
 	subRotation = sub->rotation;
 
 	//get pointer to camera for convenience:
@@ -101,6 +166,7 @@ PlayMode::PlayMode() : scene(*hexapod_scene) {
 	//start music loop playing:
 	// (note: position will be over-ridden in update())
 	//leg_tip_loop = Sound::loop_3D(*dusty_floor_sample, 1.0f, glm::vec3(0), 10.0f);
+	Sound::loop(*ambient, 1.0f, 10.0f);
 }
 
 PlayMode::~PlayMode() {
@@ -230,10 +296,16 @@ void PlayMode::update(float elapsed) {
 		}
 
 		float sonarSpeed = 1.0f;
+		float propSpeed = 3.0f;
 
 		sonararm->rotation = glm::normalize(
 			sonararm->rotation
 			* glm::angleAxis(sonarSpeed * elapsed, glm::vec3(1.0f, 0.0f, 0.0f))
+		);
+
+		prop->rotation = glm::normalize(
+			prop->rotation
+			* glm::angleAxis(propSpeed * elapsed, glm::vec3(1.0f, 0.0f, 0.0f))
 		);
 
 		float newSonarAngle = currentSonarAngle + sonarSpeed * elapsed;
@@ -241,8 +313,22 @@ void PlayMode::update(float elapsed) {
 			newSonarAngle -= 2 * glm::pi<float>();
 		}
 
-		if(DidPassLocation(currentSonarAngle, newSonarAngle, sub2->position)){
-			Sound::play(*sonar_blip, 1.0f, 0.0f);
+		for(int i = 0; i < goals.size(); i++){
+			if(!goals[i]->isCollected){
+				goals[i]->transform->rotation = glm::normalize(
+						goals[i]->transform->rotation
+						* glm::angleAxis(2.0f * elapsed, glm::vec3(0, 0, 1.0f))
+						);
+				if(DidPassLocation(currentSonarAngle, newSonarAngle, goals[i]->transform->position)){
+					Sound::play(*sonar_1, 1.0f, 0.0f);
+				}
+				if(glm::length(goals[i]->transform->position - allparent->position) < 5.0f){
+					Sound::play(*success, 1.0f, 0.0f);
+					amountCollected++;
+					goals[i]->transform->position = glm::vec3(0, 0, -20);
+					goals[i]->isCollected = true;
+				}
+			}
 		}
 
 		currentSonarAngle = newSonarAngle;
@@ -285,10 +371,10 @@ void PlayMode::update(float elapsed) {
 }
 
 bool PlayMode::DidPassLocation(float prevAngle, float newAngle, glm::vec3 location){
-	glm::vec3 toLocation = location - sub->position;
-	toLocation.z = 0.0f;
-	glm::vec3 localToLocation = toLocation * sub->make_world_to_local();
-	float angle = -(std::atan2(localToLocation.y, localToLocation.x) - glm::pi<float>());
+	glm::vec3 localLocation = sub->make_world_to_local() * glm::vec4(location, 1.0f);
+	float angle = (std::atan2(localLocation.y, localLocation.x) + glm::pi<float>());
+	printf("local location: %s\n", glm::to_string(localLocation).c_str());
+	printf("%f\n", angle);
 
 	bool currentSign = std::signbit(angle - currentSonarAngle);
 	bool newSign = std::signbit(angle - newAngle);
@@ -312,8 +398,8 @@ void PlayMode::draw(glm::uvec2 const &drawable_size) {
 	// TODO: consider using the Light(s) in the scene to do this
 	glUseProgram(lit_color_texture_program->program);
 	glUniform1i(lit_color_texture_program->LIGHT_TYPE_int, 1);
-	glUniform3fv(lit_color_texture_program->LIGHT_DIRECTION_vec3, 1, glm::value_ptr(glm::vec3(0.0f, 0.0f,-1.0f)));
-	glUniform3fv(lit_color_texture_program->LIGHT_ENERGY_vec3, 1, glm::value_ptr(glm::vec3(1.0f, 1.0f, 0.95f)));
+	glUniform3fv(lit_color_texture_program->LIGHT_DIRECTION_vec3, 1, glm::value_ptr(glm::vec3(0.0f, 1.0f,-1.0f)));
+	glUniform3fv(lit_color_texture_program->LIGHT_ENERGY_vec3, 1, glm::value_ptr(glm::vec3(1.0f, 1.0f, 1.0f) * 0.1f));
 	glUniform4fv(lit_color_texture_program->FOG_COLOR_vec4, 1, glm::value_ptr(fog_color));
 	glUseProgram(0);
 
@@ -337,12 +423,12 @@ void PlayMode::draw(glm::uvec2 const &drawable_size) {
 		));
 
 		constexpr float H = 0.09f;
-		lines.draw_text("Mouse motion rotates camera; WASD moves; escape ungrabs mouse",
+		lines.draw_text(std::to_string(amountCollected) + "/" + std::to_string(total) + " goals collected.",
 			glm::vec3(-aspect + 0.1f * H, -1.0 + 0.1f * H, 0.0),
 			glm::vec3(H, 0.0f, 0.0f), glm::vec3(0.0f, H, 0.0f),
 			glm::u8vec4(0x00, 0x00, 0x00, 0x00));
 		float ofs = 2.0f / drawable_size.y;
-		lines.draw_text("Mouse motion rotates camera; WASD moves; escape ungrabs mouse",
+		lines.draw_text(std::to_string(amountCollected) + "/" + std::to_string(total) + " goals collected.",
 			glm::vec3(-aspect + 0.1f * H + ofs, -1.0 + + 0.1f * H + ofs, 0.0),
 			glm::vec3(H, 0.0f, 0.0f), glm::vec3(0.0f, H, 0.0f),
 			glm::u8vec4(0xff, 0xff, 0xff, 0x00));

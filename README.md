@@ -1,8 +1,8 @@
-# (TODO: your game's title)
+# Deep Waters
 
-Author: (TODO: your name)
+Author: Thomas Carey
 
-Design: (TODO: In two sentences or fewer, describe what is new and interesting about your game.)
+Design: Sonar tells you the location of goals, as they are obscured by the fog of the ocean.
 
 Screen Shot:
 
@@ -10,6 +10,7 @@ Screen Shot:
 
 How To Play:
 
-(TODO: describe the controls and (if needed) goals/strategy.)
+A/D to turn the sub. W/S to move forward and backward. Q/E to rise and fall.
+Listen to the sonar blips to find the direction of the goals and run into them to pick them up.
 
 This game was built with [NEST](NEST.md).
