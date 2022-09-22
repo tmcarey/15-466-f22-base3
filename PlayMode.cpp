@@ -15,12 +15,12 @@
 
 #include <random>
 
-GLuint hexapod_meshes_for_lit_color_texture_program = 0;
-GLuint hexapod_meshes_for_unlit_color_texture_program = 0;
+GLuint meshes_for_lit_color_texture_program = 0;
+GLuint meshes_for_unlit_color_texture_program = 0;
 Load< MeshBuffer > hexapod_meshes(LoadTagDefault, []() -> MeshBuffer const * {
 	MeshBuffer const *ret = new MeshBuffer(data_path("sub.pnct"));
-	hexapod_meshes_for_lit_color_texture_program = ret->make_vao_for_program(lit_color_texture_program->program);
-	hexapod_meshes_for_unlit_color_texture_program = ret->make_vao_for_program(color_texture_program->program);
+	meshes_for_lit_color_texture_program = ret->make_vao_for_program(lit_color_texture_program->program);
+	meshes_for_unlit_color_texture_program = ret->make_vao_for_program(color_texture_program->program);
 	return ret;
 });
 
@@ -34,10 +34,10 @@ Load< Scene > hexapod_scene(LoadTagDefault, []() -> Scene const * {
 		if(transform->name == "SonarParent"
 				|| transform->name == "SonarArm"){
 			drawable.pipeline = color_texture_program_pipeline;
-			drawable.pipeline.vao = hexapod_meshes_for_unlit_color_texture_program;
+			drawable.pipeline.vao = meshes_for_unlit_color_texture_program;
 		}else{
 			drawable.pipeline = lit_color_texture_program_pipeline;
-			drawable.pipeline.vao = hexapod_meshes_for_lit_color_texture_program;
+			drawable.pipeline.vao = meshes_for_lit_color_texture_program;
 		}
 
 		drawable.pipeline.type = mesh.type;
@@ -58,7 +58,9 @@ Load< Sound::Sample > sonar_blip(LoadTagDefault, []() -> Sound::Sample const * {
 PlayMode::PlayMode() : scene(*hexapod_scene) {
 	//get pointers to leg for convenience:
 	for (auto &transform : scene.transforms) {
+		if (transform.name == "AllParent") allparent = &transform;
 		if (transform.name == "SubParent") subparent = &transform;
+		if (transform.name == "CamParent") camparent = &transform;
 		if (transform.name == "Sub") sub = &transform;
 		if (transform.name == "Sub2") sub2 = &transform;
 		if (transform.name == "Floor") floor = &transform;
@@ -68,6 +70,27 @@ PlayMode::PlayMode() : scene(*hexapod_scene) {
 	if (subparent == nullptr) throw std::runtime_error("subparent not found.");
 	if (floor == nullptr) throw std::runtime_error("floor not found.");
 	if (sonararm == nullptr) throw std::runtime_error("sonararm not found.");
+
+	for(int i = 0; i < particles.size(); i++){
+		Scene::Transform *transform = new Scene::Transform();
+
+		Particle *particle = new Particle();
+		particle->transform = transform;
+		particle->t = 0;
+
+		Mesh const &mesh = hexapod_meshes->lookup("Particle");
+
+		scene.drawables.emplace_back(transform);
+		Scene::Drawable &drawable = scene.drawables.back();
+
+		drawable.pipeline = lit_color_texture_program_pipeline;
+		drawable.pipeline.vao = meshes_for_lit_color_texture_program;
+
+		drawable.pipeline.type = mesh.type;
+		drawable.pipeline.start = mesh.start;
+		drawable.pipeline.count = mesh.count;
+		particles[i] = particle;
+	}
 
 	subRotation = sub->rotation;
 
@@ -141,15 +164,6 @@ bool PlayMode::handle_event(SDL_Event const &evt, glm::uvec2 const &window_size)
 		}
 	} else if (evt.type == SDL_MOUSEMOTION) {
 		if (SDL_GetRelativeMouseMode() == SDL_TRUE) {
-			/* glm::vec2 motion = glm::vec2( */
-			/* 	evt.motion.xrel / float(window_size.y), */
-			/* 	-evt.motion.yrel / float(window_size.y) */
-			/* ); */
-			/* camera->transform->rotation = glm::normalize( */
-			/* 	camera->transform->rotation */
-			/* 	* glm::angleAxis(-motion.x * camera->fovy, glm::vec3(0.0f, 1.0f, 0.0f)) */
-			/* 	* glm::angleAxis(motion.y * camera->fovy, glm::vec3(1.0f, 0.0f, 0.0f)) */
-			/* ); */
 			return true;
 		}
 	}
@@ -158,13 +172,33 @@ bool PlayMode::handle_event(SDL_Event const &evt, glm::uvec2 const &window_size)
 }
 
 void PlayMode::update(float elapsed) {
+	//Process particles
+	for(int i = 0; i < particles.size(); i++){
+		if(particles[i]->t == 0){
+			float x = static_cast <float> (rand()) / static_cast <float> (RAND_MAX);
+			float y = static_cast <float> (rand()) / static_cast <float> (RAND_MAX);
+			float z = static_cast <float> (rand()) / static_cast <float> (RAND_MAX);
 
-	//slowly rotates through [0,1):
-	//move sound to follow leg tip position:
-	//
-	//floor->position = glm::vec3(sub->position.x, sub->position.y, 0.0f);
+			glm::vec3 offset = glm::vec3(x - 0.5f,y - 0.5f,z - 0.5f) * 15.0f;
+			particles[i]->transform->position = allparent->position + offset;
+			particles[i]->maxT = 3.0f * static_cast <float> (rand()) / static_cast <float> (RAND_MAX);
+			particles[i]->transform->scale = glm::vec3(0);
+		}
+		particles[i]->t += elapsed;
+		particles[i]->transform->position += glm::vec3(0, 0, 3.0f) * elapsed;
 
-	//move camera:
+		if(particles[i]->t < particles[i]->maxT / 2.0f){
+			particles[i]->transform->scale = glm::mix(glm::vec3(0), glm::vec3(0.1f), particles[i]->t);
+		}else{
+			particles[i]->transform->scale = glm::mix(glm::vec3(0.1f), glm::vec3(0), (particles[i]->t) - (particles[i]->maxT /2.0f));
+		}
+
+
+		if(particles[i]->t >= particles[i]->maxT){
+			particles[i]->t = 0;
+		}
+	}
+
 	{
 
 		//combine inputs into a move:
@@ -183,11 +217,13 @@ void PlayMode::update(float elapsed) {
 		//glm::vec3 up = frame[1];
 		glm::vec3 frame_forward = -frame[2];
 
-		subparent->position += move.y * -frame_right * elapsed * 1000.0f;
+		allparent->position += move.y * -frame_right * elapsed * 1000.0f;
 		subparent->rotation = glm::normalize(
 			subparent->rotation
 			* glm::angleAxis(-move.x * 10.0f * elapsed, glm::vec3(0.0f, 0.0f, 1.0f))
 		);
+
+		camparent->rotation = glm::slerp(camparent->rotation, subparent->rotation, elapsed * 3.0f);
 
 		if(subparent->position.z <= 1.2f){
 			subparent->position.z = 1.2f;
@@ -211,19 +247,21 @@ void PlayMode::update(float elapsed) {
 
 		currentSonarAngle = newSonarAngle;
 
+		float vertAngle = glm::pi<float>() / 16.0f;
+
 		if(up.pressed && down.pressed){
 		}else
 		if(up.pressed) {
-			subparent->position += glm::vec3(0, 0, 1) * elapsed * 10.0f;
+			allparent->position += glm::vec3(0, 0, 1) * elapsed * 10.0f;
 			sub->rotation = glm::normalize(
 				subRotation
-				* glm::angleAxis(-20.0f, glm::vec3(0.0f, 1.0f, 0.0f))
+				* glm::angleAxis(vertAngle, glm::vec3(0.0f, 1.0f, 0.0f))
 			);
 		}else if(down.pressed){
-			subparent->position -= glm::vec3(0, 0, 1) * elapsed * 10.0f;
+			allparent->position -= glm::vec3(0, 0, 1) * elapsed * 10.0f;
 			sub->rotation = glm::normalize(
 				subRotation
-				* glm::angleAxis(20.0f, glm::vec3(0.0f, 1.0f, 0.0f))
+				* glm::angleAxis(-vertAngle, glm::vec3(0.0f, 1.0f, 0.0f))
 			);
 		}else{
 			sub->rotation = glm::normalize(
@@ -268,7 +306,7 @@ void PlayMode::draw(glm::uvec2 const &drawable_size) {
 	//update camera aspect ratio for drawable:
 	camera->aspect = float(drawable_size.x) / float(drawable_size.y);
 
-	glm::vec4 fog_color(0, 0, 0.6f, 1.0f);
+	glm::vec4 fog_color(0.173f, 0.635f, 0.792f, 1.0f);
 
 	//set up light type and position for lit_color_texture_program:
 	// TODO: consider using the Light(s) in the scene to do this

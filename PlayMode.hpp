@@ -2,11 +2,13 @@
 
 #include "Scene.hpp"
 #include "Sound.hpp"
+#include "Particle.hpp"
 
 #include <glm/glm.hpp>
 
 #include <vector>
 #include <deque>
+#include <array>
 
 struct PlayMode : Mode {
 	PlayMode();
@@ -33,9 +35,12 @@ struct PlayMode : Mode {
 	Scene::Transform *sub = nullptr;
 	Scene::Transform *sub2 = nullptr;
 	glm::quat subRotation;
+	Scene::Transform *allparent = nullptr;
 	Scene::Transform *subparent = nullptr;
+	Scene::Transform *camparent = nullptr;
 	Scene::Transform *floor = nullptr;
 	Scene::Transform *sonararm = nullptr;
+	std::array<Particle*, 25> particles;
 	float currentSonarAngle = 0.0f;
 
 	//music coming from the tip of the leg (as a demonstration):
